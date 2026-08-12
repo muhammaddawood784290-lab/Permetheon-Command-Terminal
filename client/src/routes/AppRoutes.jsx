@@ -115,7 +115,14 @@ export default function AppRoutes() {
           }
         />
 
-        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route
+          path="/notifications"
+          element={
+            <PermissionRoute permission="notification.view">
+              <NotificationsPage />
+            </PermissionRoute>
+          }
+        />
 
         <Route
           path="/activity"

@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ActivityProvider } from './context/ActivityContext';
 import AppRoutes from './routes/AppRoutes';
 
 export default function App() {
@@ -20,9 +21,11 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <NotificationProvider>
-            <SidebarProvider>
-              <AppRoutes />
-            </SidebarProvider>
+            <ActivityProvider>
+              <SidebarProvider>
+                <AppRoutes />
+              </SidebarProvider>
+            </ActivityProvider>
           </NotificationProvider>
         </AuthProvider>
       </ToastProvider>

@@ -25,8 +25,10 @@ const PERMISSIONS = {
   // Reviews
   'review.view': [ROLE.ADMIN, ROLE.TEAM_LEAD, ROLE.DEVELOPER],
   'review.submit': [ROLE.ADMIN, ROLE.TEAM_LEAD, ROLE.DEVELOPER],
+  'review.start': [ROLE.ADMIN, ROLE.TEAM_LEAD],
   'review.approve': [ROLE.ADMIN, ROLE.TEAM_LEAD],
   'review.requestRevision': [ROLE.ADMIN, ROLE.TEAM_LEAD],
+  'review.assign': [ROLE.ADMIN],
 
   // Files
   'file.upload': [ROLE.ADMIN, ROLE.TEAM_LEAD, ROLE.DEVELOPER],
@@ -39,6 +41,12 @@ const PERMISSIONS = {
 
   // Activity
   'activity.view': [ROLE.ADMIN, ROLE.TEAM_LEAD, ROLE.DEVELOPER],
+
+  // Notifications — every authenticated user can view and mark their
+  // own notifications as read; only admins can manage global settings.
+  'notification.view': [ROLE.ADMIN, ROLE.TEAM_LEAD, ROLE.DEVELOPER],
+  'notification.markRead': [ROLE.ADMIN, ROLE.TEAM_LEAD, ROLE.DEVELOPER],
+  'notification.manage': [ROLE.ADMIN],
 
   // Users / roles
   'user.view': [ROLE.ADMIN, ROLE.TEAM_LEAD],

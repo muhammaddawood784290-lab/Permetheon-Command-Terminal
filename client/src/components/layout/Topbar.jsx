@@ -6,13 +6,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../ui/Icon';
 import Avatar from '../ui/Avatar';
-import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Dropdown, { DropdownItem, DropdownSeparator } from '../ui/Dropdown';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useToast } from '../../context/ToastContext';
+import { resolveTargetPath } from '../notifications/NotificationItem';
 import { formatRelativeTime } from '../../utils/formatDate';
 import { NOTIFICATION_TYPE_ICONS } from '../../utils/constants';
 import { cn } from '../../utils/cn';
@@ -21,6 +21,7 @@ function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onClickAway = (e) => {
@@ -29,6 +30,14 @@ function NotificationBell() {
     document.addEventListener('mousedown', onClickAway);
     return () => document.removeEventListener('mousedown', onClickAway);
   }, []);
+
+  const handleOpenNotification = (n) => {
+    setOpen(false);
+    // Mark as read optimistically; the context also persists this.
+    if (!n.read) markAsRead(n.id);
+    const path = resolveTargetPath(n);
+    if (path) navigate(path);
+  };
 
   return (
     <div className="relative" ref={ref}>
@@ -70,7 +79,7 @@ function NotificationBell() {
                 <button
                   key={n.id}
                   type="button"
-                  onClick={() => markAsRead(n.id)}
+                  onClick={() => handleOpenNotification(n)}
                   className={cn(
                     'w-full text-left px-4 py-3 border-b border-bg-elevated/60 hover:bg-bg-elevated transition-colors',
                     !n.read && 'bg-primary-600/5',

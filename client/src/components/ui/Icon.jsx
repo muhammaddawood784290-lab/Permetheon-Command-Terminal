@@ -82,6 +82,9 @@ const ICONS = {
   arrowLeft: (
     <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   ),
+  arrowRight: (
+    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  ),
   refresh: (
     <path d="M23 4v6h-6M1 20v-6h6M3.51 9A9 9 0 0118.36 5.64L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   ),
