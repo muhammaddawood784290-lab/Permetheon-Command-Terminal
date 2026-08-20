@@ -159,7 +159,7 @@ export default function ProjectsListPage() {
           deadline: values.deadline
             ? new Date(values.deadline).toISOString()
             : editingProject.deadline,
-        });
+        }, { actor: user });
         if (!res?.success) throw new Error(res?.message || 'Update failed');
         push({ type: 'success', message: `Project "${values.name}" updated.` });
       } else {
@@ -169,7 +169,7 @@ export default function ProjectsListPage() {
           leadId: values.leadId || values.ownerId || user?.id,
           startDate: values.startDate ? new Date(values.startDate).toISOString() : new Date().toISOString(),
           deadline: values.deadline ? new Date(values.deadline).toISOString() : null,
-        });
+        }, { actor: user });
         if (!res?.success) throw new Error(res?.message || 'Create failed');
         push({ type: 'success', message: `Project "${values.name}" created.` });
       }
@@ -199,7 +199,7 @@ export default function ProjectsListPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await projectService.update(project.id, { status: PROJECT_STATUS.ARCHIVED });
+          const res = await projectService.update(project.id, { status: PROJECT_STATUS.ARCHIVED }, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Archive failed');
           push({ type: 'success', message: `Project "${project.name}" archived.` });
           setRefreshKey((k) => k + 1);
@@ -226,7 +226,7 @@ export default function ProjectsListPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await projectService.remove(project.id);
+          const res = await projectService.remove(project.id, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Delete failed');
           push({ type: 'success', message: `Project "${project.name}" deleted.` });
           setRefreshKey((k) => k + 1);
@@ -262,7 +262,7 @@ export default function ProjectsListPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await projectService.update(project.id, { status: next });
+          const res = await projectService.update(project.id, { status: next }, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Update failed');
           push({ type: 'success', message: `Status set to ${PROJECT_STATUS_LABELS[next]}.` });
           setRefreshKey((k) => k + 1);

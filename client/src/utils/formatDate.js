@@ -83,7 +83,8 @@ export function formatTime(value) {
 export function formatRelativeTime(value, now = new Date()) {
   const d = toDate(value);
   if (!d) return '—';
-  const diffMs = now.getTime() - d.getTime();
+  const nowDate = toDate(now) || new Date();
+  const diffMs = nowDate.getTime() - d.getTime();
   const diffSec = Math.floor(diffMs / 1000);
 
   if (diffSec < 5) return 'just now';
@@ -108,22 +109,25 @@ export function formatRelativeTime(value, now = new Date()) {
 export function isOverdue(value, now = new Date()) {
   const d = toDate(value);
   if (!d) return false;
-  return d.getTime() < now.getTime();
+  const nowDate = toDate(now) || new Date();
+  return d.getTime() < nowDate.getTime();
 }
 
 export function isToday(value, now = new Date()) {
   const d = toDate(value);
   if (!d) return false;
+  const nowDate = toDate(now) || new Date();
   return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
+    d.getFullYear() === nowDate.getFullYear() &&
+    d.getMonth() === nowDate.getMonth() &&
+    d.getDate() === nowDate.getDate()
   );
 }
 
 export function getDaysUntil(value, now = new Date()) {
   const d = toDate(value);
   if (!d) return null;
-  const ms = d.getTime() - now.getTime();
+  const nowDate = toDate(now) || new Date();
+  const ms = d.getTime() - nowDate.getTime();
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }

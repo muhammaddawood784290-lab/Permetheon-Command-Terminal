@@ -405,14 +405,14 @@ task.delete
 
 # 16. Review Permissions
 
-Recommended:
+Recommended (canonical V1 keys — see §49):
 
 ```text
 review.view
 review.submit
 review.start
 review.approve
-review.request_revision
+review.requestRevision
 review.assign
 ```
 
@@ -436,7 +436,7 @@ user.view
 user.create
 user.update
 user.disable
-user.manage_roles
+user.changeRole
 ```
 
 Only Admin should normally receive:
@@ -444,7 +444,7 @@ Only Admin should normally receive:
 ```text
 user.create
 user.disable
-user.manage_roles
+user.changeRole
 ```
 
 ---
@@ -519,11 +519,11 @@ Developers should generally see relevant activity rather than unrestricted syste
 
 # 21. Notification Permissions
 
-Recommended:
+Recommended (canonical V1 keys):
 
 ```text
 notification.view
-notification.mark_read
+notification.markRead
 notification.manage
 ```
 
@@ -1141,12 +1141,68 @@ review.approve
 project.archive
 ```
 
+Frontend permission keys (defined in `client/src/utils/permissions.js`):
+
+```text
+project.view
+project.create
+project.update
+project.delete
+project.archive
+project.manageMembers
+
+task.view
+task.create
+task.update
+task.delete
+task.assign
+task.changeStatus
+
+review.view
+review.submit
+review.start
+review.approve
+review.requestRevision
+review.assign
+
+file.upload
+file.download
+file.delete
+
+report.view
+report.export
+
+activity.view
+
+notification.view
+notification.markRead
+notification.manage
+
+user.view
+user.create
+user.update
+user.disable
+user.changeRole
+
+settings.view
+settings.update
+```
+
+These are the canonical V1 keys the backend middleware must enforce. They
+use camelCase compound actions (`review.requestRevision`,
+`project.manageMembers`, `task.changeStatus`) consistent with the frontend
+helper; backend code may freely map these to snake_case columns or table
+names internally — the public API key stays camelCase.
+
 Avoid inconsistent names:
 
 ```text
 CanEditProject
 EDIT_PROJECT
 editProjectPermission
+task.submit_review      (frontend key is review.submit)
+review.revision         (frontend key is review.requestRevision)
+user.manage_roles       (frontend key is user.changeRole)
 ```
 
 ---
@@ -1221,17 +1277,18 @@ Do not add frontend controls without defining the corresponding backend behavior
 
 # 53. Module Permission Reference
 
-| Module         | Main Permissions                               |
-| -------------- | ---------------------------------------------- |
-| Authentication | authenticate                                   |
-| Projects       | create, view, update, status, members, archive |
-| Tasks          | create, view, update, assign, status, review   |
-| Reviews        | view, start, approve, revision, assign         |
-| Files          | view, upload, download, delete                 |
-| Reports        | view, export                                   |
-| Activity       | view                                           |
-| Notifications  | view, mark_read                                |
-| Users          | view, create, update, disable, manage_roles    |
+| Module         | Main Permissions                                                       |
+| -------------- | ---------------------------------------------------------------------- |
+| Authentication | authenticate                                                           |
+| Projects       | view, create, update, delete, archive, manageMembers                   |
+| Tasks          | view, create, update, delete, assign, changeStatus                     |
+| Reviews        | view, submit, start, approve, requestRevision, assign                  |
+| Files          | view, upload, download, delete                                         |
+| Reports        | view, export                                                           |
+| Activity       | view                                                                   |
+| Notifications  | view, markRead, manage                                                 |
+| Users          | view, create, update, disable, changeRole                              |
+| Settings       | view, update                                                           |
 
 ---
 

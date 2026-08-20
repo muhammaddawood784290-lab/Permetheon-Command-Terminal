@@ -164,7 +164,7 @@ export default function TaskDetailPage() {
     if (!task) return;
     setEditSubmitting(true);
     try {
-      const res = await taskService.update(task.id, values);
+      const res = await taskService.update(task.id, values, { actor: user });
       if (!res?.success) throw new Error(res?.message || 'Update failed');
       push({ type: 'success', message: `Task "${values.title}" updated.` });
       setEditOpen(false);
@@ -190,7 +190,7 @@ export default function TaskDetailPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await taskService.remove(task.id);
+          const res = await taskService.remove(task.id, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Delete failed');
           push({ type: 'success', message: `Task "${task.title}" deleted.` });
           navigate('/tasks', { replace: true });
@@ -240,7 +240,7 @@ export default function TaskDetailPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await taskService.updateStatus(task.id, next);
+          const res = await taskService.updateStatus(task.id, next, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Update failed');
           push({ type: 'success', message: `Status set to ${labels[next]}.` });
           refetch();

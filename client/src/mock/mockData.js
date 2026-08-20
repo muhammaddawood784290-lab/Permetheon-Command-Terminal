@@ -1429,63 +1429,6 @@ export const mockFiles = [
 ];
 
 // ---------------------------------------------------------------------
-// REPORTS (raw data for charts/cards)
-// ---------------------------------------------------------------------
-export const mockReportData = {
-  overview: {
-    totalProjects: 6,
-    activeProjects: 3,
-    totalTasks: 22,
-    tasksInProgress: 6,
-    tasksInReview: 2,
-    completedTasks: 5,
-    overdueTasks: 1,
-    blockedTasks: 1,
-  },
-  taskStatusDistribution: [
-    { status: TASK_STATUS.BACKLOG, count: 5 },
-    { status: TASK_STATUS.TODO, count: 3 },
-    { status: TASK_STATUS.IN_PROGRESS, count: 6 },
-    { status: TASK_STATUS.IN_REVIEW, count: 2 },
-    { status: TASK_STATUS.REVISION_REQUIRED, count: 1 },
-    { status: TASK_STATUS.COMPLETED, count: 5 },
-    { status: TASK_STATUS.BLOCKED, count: 1 },
-    { status: TASK_STATUS.CANCELLED, count: 0 },
-  ],
-  workloadByDeveloper: [
-    { userId: 'u_5', name: 'Ali Raza', workload: 7 },
-    { userId: 'u_6', name: 'Sara Iqbal', workload: 5 },
-    { userId: 'u_4', name: 'Hamza Tariq', workload: 4 },
-    { userId: 'u_7', name: 'Omar Sherif', workload: 3 },
-    { userId: 'u_8', name: 'Zainab Ali', workload: 4 },
-    { userId: 'u_9', name: 'Hassan Mahmood', workload: 1 },
-  ],
-  completionTrend: [
-    { label: 'Mon', completed: 2 },
-    { label: 'Tue', completed: 1 },
-    { label: 'Wed', completed: 3 },
-    { label: 'Thu', completed: 2 },
-    { label: 'Fri', completed: 4 },
-    { label: 'Sat', completed: 1 },
-    { label: 'Sun', completed: 0 },
-  ],
-  reviewStats: {
-    pending: 3,
-    approved: 2,
-    revisionRequired: 1,
-    averageReviewHours: 12,
-  },
-  projectProgress: [
-    { projectId: 'p_1', name: 'Permetheon Website Revamp', progress: 62 },
-    { projectId: 'p_2', name: 'Nova Nail Studio CRM', progress: 38 },
-    { projectId: 'p_3', name: 'Internal DevOps Pipeline', progress: 22 },
-    { projectId: 'p_4', name: 'Mobile Companion App', progress: 5 },
-    { projectId: 'p_5', name: 'Legacy Reporting Migration', progress: 48 },
-    { projectId: 'p_6', name: 'Customer Portal (v1)', progress: 100 },
-  ],
-};
-
-// ---------------------------------------------------------------------
 // Helpers — find by id
 // ---------------------------------------------------------------------
 export const findUserById = (id) => mockUsers.find((u) => u.id === id) || null;

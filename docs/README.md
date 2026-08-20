@@ -365,11 +365,11 @@ Basic workflow:
 ```text
 BACKLOG
    ↓
-ASSIGNED
+TODO
    ↓
 IN_PROGRESS
    ↓
-REVIEW
+IN_REVIEW
    ├──► COMPLETED
    │
    └──► REVISION_REQUIRED

@@ -11,5 +11,8 @@
     "dev": "npm --workspace client run dev",
     "build": "npm --workspace client run build",
     "preview": "npm --workspace client run preview"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
   }
 }

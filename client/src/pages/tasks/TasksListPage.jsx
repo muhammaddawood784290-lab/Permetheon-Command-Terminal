@@ -259,14 +259,14 @@ export default function TasksListPage() {
     setSubmitting(true);
     try {
       if (editingTask) {
-        const res = await taskService.update(editingTask.id, values);
+        const res = await taskService.update(editingTask.id, values, { actor: user });
         if (!res?.success) throw new Error(res?.message || 'Update failed');
         push({ type: 'success', message: `Task "${values.title}" updated.` });
       } else {
         const res = await taskService.create({
           ...values,
           creatorId: values.creatorId || user?.id,
-        });
+        }, { actor: user });
         if (!res?.success) throw new Error(res?.message || 'Create failed');
         push({ type: 'success', message: `Task "${values.title}" created.` });
       }
@@ -297,7 +297,7 @@ export default function TasksListPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await taskService.remove(task.id);
+          const res = await taskService.remove(task.id, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Delete failed');
           push({ type: 'success', message: `Task "${task.title}" deleted.` });
           setRefreshKey((k) => k + 1);
@@ -336,7 +336,7 @@ export default function TasksListPage() {
       action: async () => {
         setActionLoading(true);
         try {
-          const res = await taskService.updateStatus(task.id, next);
+          const res = await taskService.updateStatus(task.id, next, { actor: user });
           if (!res?.success) throw new Error(res?.message || 'Update failed');
           push({
             type: 'success',

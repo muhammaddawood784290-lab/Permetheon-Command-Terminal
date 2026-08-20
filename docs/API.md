@@ -19,6 +19,11 @@ The API exists only to connect the React frontend with the PCT backend and MySQL
 
 PCT does **not** depend on external third-party APIs for its core functionality.
 
+The application exposes one operational endpoint outside the `/api` envelope —
+`GET /metrics` — for Prometheus scraping. It is intentionally public,
+unauthenticated, and returns only process-level metrics. See
+`# 21. Metrics Endpoint (Prometheus)` below.
+
 ```text
 React Frontend
       │
@@ -79,6 +84,10 @@ Therefore:
 ```text
 https://pct.permetheon.com/api
 ```
+
+The Prometheus scrape endpoint is mounted at the application root
+(`/metrics`), outside the `/api` prefix, to follow standard Prometheus
+scrape configuration conventions.
 
 ---
 
@@ -494,11 +503,13 @@ Valid statuses:
 
 ```text
 BACKLOG
-ASSIGNED
+TODO
 IN_PROGRESS
-REVIEW
+IN_REVIEW
 REVISION_REQUIRED
 COMPLETED
+BLOCKED
+CANCELLED
 ```
 
 Every status change should create an activity record.
@@ -607,35 +618,70 @@ Returns review details.
 
 ---
 
-## POST /tasks/:taskId/review
+## POST /tasks/:taskId/reviews
 
-Submits a task for review.
+Submits a task for review and transitions the underlying task to `IN_REVIEW`.
 
-Example:
+Aligned with `REVIEW_SYSTEM.md §41` and `client/src/services/reviewService.js`
+(`create()`). The reviewer MUST NOT be the task's assignee (self-approval
+rule, `REVIEW_SYSTEM.md §18`).
+
+Request:
 
 ```json
 {
+  "reviewerId": 7,
   "note": "Implementation completed. Ready for review."
 }
 ```
 
+Fields:
+
+- `reviewerId` — required integer, must reference a user with `review.start`
+  permission (typically `ADMIN` or `TEAM_LEAD`) and must not equal the
+  task's `assigneeId`.
+- `note` — optional string, ≤500 characters; becomes the first feedback
+  entry on the new review record.
+
+Result:
+
+- A new review record in state `SUBMITTED` is appended.
+- The task's status transitions to `IN_REVIEW`.
+- One `TASK_SUBMITTED` activity record is emitted.
+- If the task already has an active review (`SUBMITTED`, `IN_REVIEW`,
+  or `RESUBMITTED`), the endpoint returns `400 Conflict` with reason
+  `"This task already has an active review."`
+
 ---
 
-## POST /reviews/:id/approve
+## PATCH /reviews/:id/start
 
-Approves a task.
+Marks the assigned reviewer's pickup of a `SUBMITTED` review.
+
+Body: empty.
+
+Result:
+
+- Review status → `IN_REVIEW`.
+
+---
+
+## PATCH /reviews/:id/approve
+
+Approves a submitted review.
 
 Result:
 
 ```text
-Task status → COMPLETED
+Review status → APPROVED
+Task status   → COMPLETED
 ```
 
-Approval must be logged.
+Approval must be logged (`TASK_APPROVED` activity record).
 
 ---
 
-## POST /reviews/:id/revision
+## PATCH /reviews/:id/request-revision
 
 Requests revision.
 
@@ -650,10 +696,53 @@ Request:
 Result:
 
 ```text
-Task status → REVISION_REQUIRED
+Review status → REVISION_REQUIRED
+Task status   → REVISION_REQUIRED
 ```
 
 The developer should be able to continue work after revision.
+
+---
+
+## POST /reviews/:id/resubmit
+
+Resubmits a `REVISION_REQUIRED` review after the developer addresses the
+feedback. Mirrors `reviewService.resubmit`.
+
+Request:
+
+```json
+{
+  "note": "Mobile navigation fixed; ready for another pass."
+}
+```
+
+Result:
+
+- Review status → `RESUBMITTED`.
+- Review `attempt` counter increments.
+- Task status stays `REVISION_REQUIRED` until the new review is approved
+  or another revision is requested.
+
+---
+
+## PATCH /reviews/:id/reviewer
+
+Reassigns the reviewer on a `SUBMITTED` review. Admin only.
+
+Request:
+
+```json
+{
+  "reviewerId": 9,
+  "reason": "Original reviewer on leave."
+}
+```
+
+Result:
+
+- Review's `reviewerId` and `reviewerName` are updated; a
+  `REVIEW_REASSIGNED` activity record is emitted.
 
 ---
 
@@ -1002,7 +1091,85 @@ Sensitive configuration must never be returned to the frontend unnecessarily.
 
 ---
 
-# 20. Authentication Requirements
+# 20. Metrics Endpoint (Prometheus)
+
+Base:
+
+```text
+/metrics
+```
+
+The metrics endpoint exposes process-level runtime metrics in the
+Prometheus text exposition format so a Prometheus server can scrape them.
+It is mounted outside the `/api` prefix because it does not return the
+standard JSON envelope — it returns plain text.
+
+The endpoint is **public and unauthenticated**, matching how Prometheus
+expects to scrape a target. This is consistent with `/api/health`, which
+is also unauthenticated. The endpoint reveals only aggregate process
+counters and gauges; it does not include user data, credentials,
+authentication tokens, request bodies, environment variables, or
+database connection details.
+
+---
+
+## GET /metrics
+
+Returns the current Prometheus snapshot.
+
+Response headers:
+
+```text
+Content-Type: text/plain; version=0.0.4; charset=utf-8
+Cache-Control: no-store
+```
+
+Response body (excerpt):
+
+```text
+# HELP pct_service_info PCT API service identity (always 1).
+# TYPE pct_service_info gauge
+pct_service_info{name="pct-api",version="0.4.0",node_version="v18.x.x",environment="production"} 1
+# HELP pct_process_uptime_seconds Process uptime in seconds.
+# TYPE pct_process_uptime_seconds gauge
+pct_process_uptime_seconds 12.345
+# HELP pct_memory_rss_bytes Resident set size in bytes.
+# TYPE pct_memory_rss_bytes gauge
+pct_memory_rss_bytes 123456789
+...
+```
+
+Exposed metrics include:
+
+```text
+pct_service_info                       gauge   service identity (name, version, node_version, environment)
+pct_process_uptime_seconds             gauge   process uptime (seconds)
+pct_process_start_time_seconds         gauge   unix epoch seconds at which the process started
+pct_memory_rss_bytes                   gauge   resident set size
+pct_memory_heap_total_bytes            gauge   V8 heap total
+pct_memory_heap_used_bytes             gauge   V8 heap used
+pct_memory_external_bytes              gauge   external memory
+pct_memory_array_buffers_bytes         gauge   ArrayBuffers memory
+pct_cpu_user_seconds_total             gauge   CPU time spent in user mode (seconds)
+pct_cpu_system_seconds_total           gauge   CPU time spent in system mode (seconds)
+pct_nodejs_eventloop_lag_ms            histogram event-loop tick duration (ms), rolling 100-sample window
+pct_process_pid                        counter process ID (changes on restart; useful for dashboarding)
+```
+
+The endpoint is suitable for direct use in a `prometheus.yml` scrape
+configuration:
+
+```yaml
+scrape_configs:
+  - job_name: pct-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['pct.permetheon.com']
+```
+
+---
+
+# 21. Authentication Requirements
 
 All protected endpoints must verify authentication.
 
@@ -1029,7 +1196,7 @@ Authentication must be performed server-side.
 
 ---
 
-# 21. Permission Requirements
+# 22. Permission Requirements
 
 Frontend visibility does not equal authorization.
 
@@ -1049,7 +1216,7 @@ Every sensitive operation must have backend permission checks.
 
 ---
 
-# 22. Validation
+# 23. Validation
 
 All user-provided input must be validated.
 
@@ -1070,7 +1237,7 @@ Invalid data must not reach database operations unchecked.
 
 ---
 
-# 23. Pagination
+# 24. Pagination
 
 Large collections should support pagination.
 
@@ -1086,7 +1253,7 @@ The backend must prevent extremely large arbitrary limits.
 
 ---
 
-# 24. Search and Filtering
+# 25. Search and Filtering
 
 Search should be handled by the backend for database-backed collections.
 
@@ -1104,7 +1271,7 @@ Filtering should be combined with pagination where appropriate.
 
 ---
 
-# 25. API Security Rules
+# 26. API Security Rules
 
 The following are mandatory:
 
@@ -1123,7 +1290,7 @@ The following are mandatory:
 
 ---
 
-# 26. File Security
+# 27. File Security
 
 Uploaded files must not automatically become executable server-side content.
 
@@ -1139,7 +1306,7 @@ The upload system must:
 
 ---
 
-# 27. API Naming Convention
+# 28. API Naming Convention
 
 Use plural resource names.
 
@@ -1173,7 +1340,7 @@ DELETE  → Delete/archive
 
 ---
 
-# 28. Route Organization
+# 29. Route Organization
 
 Backend routes should be separated into individual route files.
 
@@ -1190,14 +1357,15 @@ server/routes/
 ├── notificationRoutes.js
 ├── activityRoutes.js
 ├── reportRoutes.js
-└── fileRoutes.js
+├── fileRoutes.js
+└── metricsRoutes.js
 ```
 
 Do not place the entire API inside `server.js`.
 
 ---
 
-# 29. Controller Organization
+# 30. Controller Organization
 
 Recommended:
 
@@ -1226,7 +1394,7 @@ Controllers should not become giant files containing every business rule.
 
 ---
 
-# 30. Service Organization
+# 31. Service Organization
 
 Recommended:
 
@@ -1254,7 +1422,7 @@ MySQL
 
 ---
 
-# 31. Database Access
+# 32. Database Access
 
 All database operations must use the configured MySQL connection.
 
@@ -1273,7 +1441,7 @@ inside source code.
 
 ---
 
-# 32. Logging
+# 33. Logging
 
 Important backend events should be logged appropriately.
 
@@ -1298,7 +1466,7 @@ Do not log:
 
 ---
 
-# 33. Development API Testing
+# 34. Development API Testing
 
 During development, backend routes should be tested independently before connecting complex frontend flows.
 
@@ -1318,7 +1486,7 @@ Testing should verify:
 
 ---
 
-# 34. API Architecture Rule
+# 35. API Architecture Rule
 
 The API is an **internal application interface**.
 
@@ -1337,7 +1505,7 @@ unless a future PCT requirement explicitly demands them.
 
 ---
 
-# 35. Final API Architecture
+# 36. Final API Architecture
 
 ```text id="1f6gzo"
 React Frontend
@@ -1371,11 +1539,14 @@ Express.js
 MySQL
       +
 Hostinger File Storage
+
+# Operational endpoint (outside /api, plain text, public):
+/metrics   # Prometheus scrape target
 ```
 
 ---
 
-# 36. Source of Truth
+# 37. Source of Truth
 
 This document defines the current PCT backend API architecture.
 

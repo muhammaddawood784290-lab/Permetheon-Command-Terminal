@@ -276,8 +276,11 @@ Resource Scope
 Full permission rules are defined in:
 
 ```text
-ROLE_PERMISSIONS.md
+ROLE_PERMESSIONS.md
 ```
+
+(Note: the file is intentionally named with one `I` —
+`ROLE_PERMESSIONS.md`. Do not rename without updating every reference.)
 
 ---
 
@@ -662,21 +665,25 @@ The frontend should also clear relevant authentication state.
 
 ---
 
-# 31. Disabled Accounts
+# 31. Disabled / Suspended Accounts
 
-A disabled account must not be allowed to continue normal protected operations.
+A disabled or suspended account must not be allowed to continue normal
+protected operations.
 
-Example:
+Status vocabulary (see `AUTHENTICATION.md §7` and `DATABASE.md §11`):
 
 ```text
 User
  ↓
-Status = DISABLED
+Status = INACTIVE  or  Status = SUSPENDED
  ↓
 Protected Request
  ↓
 Denied
 ```
+
+`SUSPENDED` indicates an administrative hold and is distinguished from
+`INACTIVE` so the UI can surface a different reason to the affected user.
 
 Depending on the authentication architecture, active sessions may also need invalidation.
 
@@ -1562,7 +1569,7 @@ Security-related implementation must remain synchronized with:
 
 ```text
 AUTHENTICATION.md
-ROLE_PERMISSIONS.md
+ROLE_PERMESSIONS.md    (intentional filename spelling)
 API.md
 DATABASE.md
 FILE_SYSTEM.md

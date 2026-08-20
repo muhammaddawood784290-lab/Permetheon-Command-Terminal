@@ -156,16 +156,25 @@ Authorization
 
 Users should have an account status.
 
-Recommended values:
+Status vocabulary (aligned with `client/src/utils/constants.js` `USER_STATUS`
+and `DATABASE.md §11`):
 
 ```text id="p9aj0k"
 ACTIVE
 INACTIVE
+SUSPENDED
 ```
+
+Definitions:
+
+- `ACTIVE` — normal operational account; may authenticate.
+- `INACTIVE` — disabled by an admin; cannot authenticate.
+- `SUSPENDED` — temporary administrative hold; cannot authenticate.
 
 Only active users can authenticate.
 
-An inactive user attempting to log in must be rejected.
+A non-`ACTIVE` user (inactive or suspended) attempting to log in must be
+rejected with a generic credential error to avoid account enumeration.
 
 ---
 

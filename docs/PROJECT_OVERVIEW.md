@@ -633,6 +633,12 @@ API definitions are maintained separately in:
 API.md
 ```
 
+The backend additionally exposes one operational endpoint outside the
+`/api` prefix — `GET /metrics` — for Prometheus scraping. It returns
+process-level metrics in the Prometheus text exposition format and does
+not require authentication. See `API.md §20` for the response shape and
+the list of exposed metrics.
+
 ---
 
 # 24. Backend Responsibilities

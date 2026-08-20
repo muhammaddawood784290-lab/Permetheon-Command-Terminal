@@ -712,16 +712,17 @@ Project
    └── Task
 ```
 
-Task lifecycle:
+Task lifecycle (aligned with `TASK_SYSTEM.md §3` and
+`DATABASE.md §19`):
 
 ```text
 BACKLOG
    ↓
-ASSIGNED
+TODO
    ↓
 IN_PROGRESS
    ↓
-REVIEW
+IN_REVIEW
    ↓
 COMPLETED
 ```
@@ -729,14 +730,21 @@ COMPLETED
 Revision:
 
 ```text
-REVIEW
+IN_REVIEW
    ↓
 REVISION_REQUIRED
    ↓
 IN_PROGRESS
    ↓
-REVIEW
+IN_REVIEW
 ```
+
+The legacy `ASSIGNED` step is not used in V1 — `TODO` is the explicit
+"ready to start" marker after a developer has been assigned. The legacy
+`REVIEW` task status is replaced by `IN_REVIEW` to keep the on-task
+marker in lockstep with the review record's `IN_REVIEW` state.
+
+Side states: `BLOCKED` (cannot move forward) and `CANCELLED` (abandoned).
 
 Every meaningful task state change should be logged.
 
@@ -771,14 +779,22 @@ Developer
 Submit Task
     │
     ▼
-REVIEW
+IN_REVIEW  (task status)
     │
     ├──────────────┐
     ▼              ▼
- APPROVED       REVISION
+ APPROVED       REVISION_REQUIRED
     │              │
     ▼              ▼
 COMPLETED      IN_PROGRESS
+```
+
+Review record status vocabulary (see `REVIEW_SYSTEM.md §5`):
+
+```text
+SUBMITTED → IN_REVIEW
+            ├── APPROVED
+            └── REVISION_REQUIRED → RESUBMITTED → IN_REVIEW
 ```
 
 Reviews must retain feedback and reviewer information.

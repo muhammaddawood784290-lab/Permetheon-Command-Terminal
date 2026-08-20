@@ -3,10 +3,12 @@
 //
 // Full review queue with search, filters, sort, permission-aware actions
 // (start, approve, request revision, reassign reviewer), and KPI stats
-// up top. Mirrors TasksListPage structure for consistency, but the
-// "create" flow is intentionally absent: reviews are created by the
-// workflow itself (developer submits task → review record exists),
-// not authored manually from this page.
+// up top. Mirrors TasksListPage structure for consistency.
+//
+// Reviews are normally created by the workflow itself (developer submits
+// task → review record exists), but Admins, Team Leads, and Developers
+// can also author a review directly from this page via the "Add review"
+// button, which mirrors the Tasks → "New task" pattern.
 // =====================================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -27,11 +29,12 @@ import ReviewStats from '../../components/reviews/ReviewStats';
 import ReviewFilters from '../../components/reviews/ReviewFilters';
 import ReviewTable from '../../components/reviews/ReviewTable';
 import ReviewCard from '../../components/reviews/ReviewCard';
+import ReviewForm from '../../components/reviews/ReviewForm';
 
 import reviewService from '../../services/reviewService';
 import projectService from '../../services/projectService';
 import developerService from '../../services/developerService';
-import { mockUsers } from '../../mock/mockData';
+import { mockReviews, mockTasks, mockProjects, mockUsers } from '../../mock/mockData';
 import { useAsync } from '../../hooks/useAsync';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +45,7 @@ import {
   ROLE,
   SORT_DIR,
   REVIEW_STATUS_LABELS,
+  TASK_STATUS,
 } from '../../utils/constants';
 
 const DEFAULT_FILTERS = {
@@ -182,6 +186,7 @@ export default function ReviewQueuePage() {
   const canApprove = hasPermission(user, 'review.approve');
   const canRequestRevision = hasPermission(user, 'review.requestRevision');
   const canAssign = hasPermission(user, 'review.assign');
+  const canSubmitReview = hasPermission(user, 'review.submit');
 
   // ----- confirm / modal state -------------------------------------
   const [confirm, setConfirm] = useState(null);
@@ -196,6 +201,46 @@ export default function ReviewQueuePage() {
 
   const [assignFor, setAssignFor] = useState(null);
   const [assignReviewerId, setAssignReviewerId] = useState('');
+
+  // ----- create-review modal state --------------------------------
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // Eligible tasks for new review: In Progress + assigned + not already
+  // covered by an active review. We pull from mockTasks/mockReviews to
+  // avoid a second round-trip while the modal is open and so the list
+  // reflects local mutations immediately after the create.
+  const eligibleTasks = useMemo(() => {
+    const activeIds = new Set(
+      mockReviews
+        .filter(
+          (r) =>
+            r.status === REVIEW_STATUS.SUBMITTED ||
+            r.status === REVIEW_STATUS.IN_REVIEW ||
+            r.status === REVIEW_STATUS.RESUBMITTED,
+        )
+        .map((r) => r.taskId),
+    );
+    return mockTasks.filter(
+      (t) =>
+        t.status === TASK_STATUS.IN_PROGRESS && t.assigneeId && !activeIds.has(t.id),
+    );
+  }, []);
+
+  const eligibleTaskOptions = useMemo(() => {
+    const projectById = new Map((mockProjects || []).map((p) => [p.id, p]));
+    const userById = new Map((mockUsers || []).map((u) => [u.id, u]));
+    return eligibleTasks.map((t) => ({
+      value: t.id,
+      label: `${t.code || t.id} · ${t.title}`,
+      task: {
+        ...t,
+        projectName: projectById.get(t.projectId)?.name || t.projectName || t.projectId,
+        assigneeName: userById.get(t.assigneeId)?.name || t.assigneeName || t.assigneeId,
+        assigneeRole: userById.get(t.assigneeId)?.role || t.assigneeRole,
+      },
+    }));
+  }, [eligibleTasks]);
 
   // ----- handlers --------------------------------------------------
   const refresh = () => setRefreshKey((k) => k + 1);
@@ -320,6 +365,25 @@ export default function ReviewQueuePage() {
     }
   };
 
+  const handleCreate = async ({ taskId, reviewerId, note }) => {
+    if (creating) return; // Prevent double-submit.
+    setCreating(true);
+    try {
+      const res = await reviewService.create(
+        { taskId, reviewerId, note },
+        { actor: user },
+      );
+      if (!res?.success) throw new Error(res?.message || 'Could not create the review.');
+      push({ type: 'success', message: 'Review submitted.' });
+      setCreateOpen(false);
+      refresh();
+    } catch (err) {
+      push({ type: 'error', message: err.message || 'Could not create the review.' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleResetFilters = () => {
     setSearchInput('');
     setStatus('all');
@@ -361,6 +425,16 @@ export default function ReviewQueuePage() {
           My reviews
         </button>
       </div>
+      {canSubmitReview && (
+        <Button
+          variant="primary"
+          size="sm"
+          leftIcon={<Icon name="plus" size="sm" />}
+          onClick={() => setCreateOpen(true)}
+        >
+          Add review
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"
@@ -605,6 +679,18 @@ export default function ReviewQueuePage() {
             required
           />
         </Modal>
+      )}
+
+      {/* Add review modal (create flow) */}
+      {createOpen && (
+        <ReviewForm
+          open={createOpen}
+          taskOptions={eligibleTaskOptions}
+          reviewerOptions={reviewerOptions}
+          onSubmit={handleCreate}
+          onClose={() => !creating && setCreateOpen(false)}
+          submitting={creating}
+        />
       )}
     </PageContainer>
   );

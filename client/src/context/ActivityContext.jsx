@@ -13,6 +13,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import activityService from '../services/activityService';
+import { subscribeActivityChange } from '../services/activityHelpers';
 import { useAuth } from './AuthContext';
 
 const ActivityContext = createContext(null);
@@ -113,6 +114,18 @@ export function ActivityProvider({ children }) {
   useEffect(() => {
     loadOptions();
   }, [loadOptions]);
+
+  // Live refresh: every service that writes through `recordActivity()`
+  // notifies us through the pub/sub. We simply refetch — any filter
+  // change made by the same event already triggered the previous
+  // useEffect, so this coalesces naturally.
+  useEffect(() => {
+    const unsubscribe = subscribeActivityChange(() => {
+      refresh();
+      refreshStats();
+    });
+    return unsubscribe;
+  }, [refresh, refreshStats]);
 
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);

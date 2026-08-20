@@ -280,16 +280,25 @@ Do not introduce a separate permissions system unless the project actually requi
 
 # 11. User Status
 
-Initial statuses:
+Status vocabulary (aligned with `client/src/utils/constants.js` `USER_STATUS`):
 
 ```text
 ACTIVE
 INACTIVE
+SUSPENDED
 ```
 
-Inactive users cannot authenticate.
+Definitions:
 
-Historical records belonging to inactive users must remain intact.
+- `ACTIVE` — normal operational account; may authenticate and act.
+- `INACTIVE` — disabled by an admin; cannot authenticate but historical
+  records (tasks, reviews, activity) remain intact.
+- `SUSPENDED` — temporary administrative hold (e.g. policy review); cannot
+  authenticate. Differs from `INACTIVE` only by intent.
+
+Inactive and suspended users cannot authenticate.
+
+Historical records belonging to disabled users must remain intact.
 
 ---
 
@@ -494,15 +503,19 @@ updated_at
 
 # 19. Task Status
 
-Initial task lifecycle:
+Aligned with the frontend status vocabulary defined in `TASK_SYSTEM.md §3` and
+`client/src/utils/constants.js` (`TASK_STATUS`). The database is the source of
+truth for V1 and must accept all eight values:
 
 ```text
 BACKLOG
-ASSIGNED
+TODO
 IN_PROGRESS
-REVIEW
+IN_REVIEW
 REVISION_REQUIRED
 COMPLETED
+BLOCKED
+CANCELLED
 ```
 
 Expected flow:
@@ -510,17 +523,25 @@ Expected flow:
 ```text
 BACKLOG
    ↓
-ASSIGNED
+TODO
    ↓
 IN_PROGRESS
    ↓
-REVIEW
+IN_REVIEW
    ├──→ COMPLETED
    │
    └──→ REVISION_REQUIRED
              ↓
          IN_PROGRESS
 ```
+
+Notes:
+
+- `TODO` is the explicit "ready to start" step (the historic `ASSIGNED` alias
+  is not used in V1 — see `ARCHITECTURE.md §24`).
+- `IN_REVIEW` (not `REVIEW`) is the on-task marker that the reviewer owns the
+  record. Review records themselves carry their own status (see §24).
+- `BLOCKED` and `CANCELLED` are terminal side states.
 
 The application should not randomly introduce additional statuses.
 
@@ -633,14 +654,23 @@ feedback
 created_at
 ```
 
-Review statuses:
+Review statuses (aligned with `REVIEW_SYSTEM.md §5` and
+`client/src/utils/constants.js` `REVIEW_STATUS`):
 
 ```text
+SUBMITTED
+IN_REVIEW
 APPROVED
 REVISION_REQUIRED
+RESUBMITTED
 ```
 
 A review should retain the reviewer and timestamp.
+
+The five-value vocabulary is required for V1 to support the full review
+lifecycle (initial submission → reviewer pickup → approve/revision → resubmission).
+Legacy two-state (`APPROVED` / `REVISION_REQUIRED`) records must be migrated
+backwards if any exist.
 
 ---
 
@@ -649,18 +679,24 @@ A review should retain the reviewer and timestamp.
 ```text
 Developer
     ↓
-Task → REVIEW
+Task → IN_REVIEW
     ↓
-Team Lead / Authorized Reviewer
-    │
+Review record:  SUBMITTED → IN_REVIEW
     ├── APPROVED
     │       ↓
-    │   COMPLETED
+    │   Task → COMPLETED
     │
     └── REVISION_REQUIRED
             ↓
-        IN_PROGRESS
+        Task → IN_PROGRESS
+            ↓
+        Developer resubmits
+            ↓
+        Review record:  RESUBMITTED → IN_REVIEW
 ```
+
+Self-approval rule: the task assignee cannot be the reviewer
+(`REVIEW_SYSTEM.md §18`).
 
 Historical review records should not be destroyed simply because a task is reviewed again.
 
@@ -1225,7 +1261,7 @@ Example:
 ```sql
 SELECT COUNT(*)
 FROM tasks
-WHERE status = 'REVIEW';
+WHERE status = 'IN_REVIEW';
 ```
 
 instead of loading every review task merely to count them.
